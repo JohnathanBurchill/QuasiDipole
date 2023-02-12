@@ -40,7 +40,7 @@ enum quasiDipoleStatus
 int initQuasiDipleCoefficients(char *filename, double year, bool calculateLongitudeOffset);
 void freeQuasiDipoleCoefficients(void);
 
-int geographicToQuasiDipole(char *coeffFilename, double dateAsYear, double geodeticLatitude, double longitude, double altitudeKm, double *qdLatitude, double *qdLongitude, double *mlt);
+int geographicToQuasiDipole(char *coeffFilename, double unixTime, double geodeticLatitude, double longitude, double altitudeKm, double *qdLatitude, double *qdLongitude, double *mlt);
 
 double solarTimeDifferenceHours(double dateAsYear);
 
