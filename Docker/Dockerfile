@@ -31,7 +31,7 @@ RUN make
 ENTRYPOINT ["/bin/bash"]
 
 FROM scratch AS deploy
-COPY --from=build /home/science/build/QuasiDipole/build/quasidipole /.
+COPY --from=build /home/science/build/QuasiDipole/build/qdexample /.
 COPY --from=build /home/science/build/QuasiDipole/include/quasidipole.h /.
 COPY --from=build /home/science/build/QuasiDipole/build/libquasidipole.a /.
 ENTRYPOINT ["/quasidipole"]

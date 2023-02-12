@@ -38,7 +38,7 @@ INCLUDE_DIRECTORIES(${INCLUDE_DIRS})
 
 ADD_LIBRARY(quasidipole quasidipole.c)
 
-add_executable(qd main.c)
-target_link_libraries(qd quasidipole -lm)
+add_executable(qdexample main.c)
+target_link_libraries(qdexample quasidipole -static -lm)
 
 # install(TARGETS quasidipole DESTINATION $ENV{HOME}/bin)
