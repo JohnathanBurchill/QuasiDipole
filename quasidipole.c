@@ -489,11 +489,11 @@ double quasiDipoleMagneticLocalTime(char *coeffFilename, double unixTime, double
     double utHours = tdata->tm_hour + tdata->tm_min / 60.0 + tdata->tm_sec / 3600.0;
     double apparentSolarTime = utHours + diffHours;
     // Update latitude based on solar declination
-    double latitude = solarDeclinationAnglePSA(unixTime);
-    double longitude = (apparentSolarTime - 12.0) * 15.0;
+    double latitudeSubsolarPoint = solarDeclinationAnglePSA(unixTime);
+    double longitudeSubsolarPoint = (12.0 - apparentSolarTime) * 15.0;
     double qdlatitudeSubsolarPoint = 0.0;
     double qdlongitudeSubsolarPoint = 0.0;
-    status = geographicToQuasiDipole(coeffFilename, unixTime, latitude, longitude, 64000.0, &qdlatitudeSubsolarPoint, &qdlongitudeSubsolarPoint);
+    status = geographicToQuasiDipole(coeffFilename, unixTime, latitudeSubsolarPoint, longitudeSubsolarPoint, 64000.0, &qdlatitudeSubsolarPoint, &qdlongitudeSubsolarPoint);
     if (status != QD_OK)
         return status;
 
