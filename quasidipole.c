@@ -489,11 +489,12 @@ double quasiDipoleMagneticLocalTime(char *coeffFilename, double unixTime, double
     double utHours = tdata->tm_hour + tdata->tm_min / 60.0 + tdata->tm_sec / 3600.0;
     double apparentSolarTime = utHours + diffHours;
     // Update latitude based on solar declination
-    double latitude = 0.0;
-    double longitude = (apparentSolarTime - 12.0) / 15.0;
+    double latitude = solarDeclinationAnglePSA(unixTime);
+    double longitude = (apparentSolarTime - 12.0) * 15.0;
+    printf("longitude of subsolarpoint: %lg\n", longitude);
     double qdlatitudeSubsolarPoint = 0.0;
     double qdlongitudeSubsolarPoint = 0.0;
-    status = geographicToQuasiDipole(coeffFilename, unixTime, 0.0, longitude, 64000.0, &qdlatitudeSubsolarPoint, &qdlongitudeSubsolarPoint);
+    status = geographicToQuasiDipole(coeffFilename, unixTime, latitude, longitude, 64000.0, &qdlatitudeSubsolarPoint, &qdlongitudeSubsolarPoint);
     if (status != QD_OK)
         return status;
 
@@ -505,6 +506,28 @@ double quasiDipoleMagneticLocalTime(char *coeffFilename, double unixTime, double
 
     return status;
 
+}
+
+// Ref "PSA": Blanco-Muriel, M., Alarcón-Padilla, D. C., López-Moratalla, T., & Lara-Coira, M. (2001). Computing the solar vector. Solar energy, 70(5), 431-441.
+// PSA Eq. 1
+double julianDayPSA(double unixTime)
+{
+    time_t t = (time_t)floor(unixTime);
+    struct tm *dt = gmtime(&t);
+    int year = dt->tm_year + 1900;
+    int month = dt->tm_mon + 1;
+    int day = dt->tm_mday;
+    double hour = (double)dt->tm_hour;
+    double min = (double)dt->tm_min;
+    double sec = (double)dt->tm_sec;
+    hour += min / 60. + (sec + (unixTime - (double)t)) / 3600.0;
+
+    long julianDayInt = (1461 * (year + 4800 + (month-14)/12)) / 4 + (367*(month - 2 -12*((month-14)/12))) / 12 - (3*((year + 4900 + (month-14)/12)/100)) / 4 + day - 32075;
+    double julianDay = (double)julianDayInt - 0.5 + hour / 24.0;
+
+    printf("Day, month, year, julian day: %d, %d, %d, %.2lf\n", day, month, year, julianDay);
+
+    return julianDay;
 }
 
 double solarTimeDifferenceHours(double dateAsYear)
@@ -520,6 +543,30 @@ double solarTimeDifferenceHours(double dateAsYear)
     double timeDifferenceMinutes = 720.0 * (c - (int)(c+0.5));
 
     return timeDifferenceMinutes / 60.0;
+}
+
+double solarDeclinationAnglePSA(double unixTime)
+{
+    // PSA Eq 2
+    double n = julianDayPSA(unixTime) - 2451545.0;
+    // PSA Eq 3
+    double omega = 2.1429 - 0.0010394594 * n;
+    // PSA Eq 4
+    double ml = 4.8950630 + 0.017202791698 * n;
+    // PSA Eq 5
+    double g = 6.2400600 + 0.0172019699 * n;
+    // PSA Eq 6
+    double el = ml + 0.03341607 * sin(g) + 0.00034894 * sin(2.0 * g) - 0.0001134 - 0.0000203 * sin(omega);
+    // PSA Eq 7
+    double ep = 0.4090928 - 6.2140e-9 * n + 0.0000396 * cos(omega);
+
+    // PSA Eq 9
+    double declination = asin(sin(ep) * sin(el)) * 180.0 / M_PI;
+
+    printf("Declination: %lg\n", declination);
+
+    return declination;
+
 }
 
 int quasiDipoleToGeographic(char *coeffFilename, double unixTime, double qdLatitude, double qdLongitude, double altitudeKm, double *geodeticLatitude, double *longitude)

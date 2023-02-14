@@ -42,7 +42,9 @@ void freeQuasiDipoleCoefficients(void);
 
 int geographicToQuasiDipole(char *coeffFilename, double unixTime, double geodeticLatitude, double longitude, double altitudeKm, double *qdLatitude, double *qdLongitude);
 
+double julianDayPSA(double unixTime);
 double solarTimeDifferenceHours(double dateAsYear);
+double solarDeclinationAnglePSA(double unixTime);
 
 int quasiDipoleToGeographic(char *coeffFilename, double unixTime, double qdLatitude, double qdLongitude, double altitudeKm, double *geodeticLatitude, double *longitude);
 double quasiDipoleMagneticLocalTime(char *coeffFilename, double unixTime, double qdLatitude, double qdLongitude, double *mlt);
