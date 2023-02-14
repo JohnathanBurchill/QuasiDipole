@@ -491,7 +491,6 @@ double quasiDipoleMagneticLocalTime(char *coeffFilename, double unixTime, double
     // Update latitude based on solar declination
     double latitude = solarDeclinationAnglePSA(unixTime);
     double longitude = (apparentSolarTime - 12.0) * 15.0;
-    printf("longitude of subsolarpoint: %lg\n", longitude);
     double qdlatitudeSubsolarPoint = 0.0;
     double qdlongitudeSubsolarPoint = 0.0;
     status = geographicToQuasiDipole(coeffFilename, unixTime, latitude, longitude, 64000.0, &qdlatitudeSubsolarPoint, &qdlongitudeSubsolarPoint);
@@ -524,8 +523,6 @@ double julianDayPSA(double unixTime)
 
     long julianDayInt = (1461 * (year + 4800 + (month-14)/12)) / 4 + (367*(month - 2 -12*((month-14)/12))) / 12 - (3*((year + 4900 + (month-14)/12)/100)) / 4 + day - 32075;
     double julianDay = (double)julianDayInt - 0.5 + hour / 24.0;
-
-    printf("Day, month, year, julian day: %d, %d, %d, %.2lf\n", day, month, year, julianDay);
 
     return julianDay;
 }
@@ -562,8 +559,6 @@ double solarDeclinationAnglePSA(double unixTime)
 
     // PSA Eq 9
     double declination = asin(sin(ep) * sin(el)) * 180.0 / M_PI;
-
-    printf("Declination: %lg\n", declination);
 
     return declination;
 
