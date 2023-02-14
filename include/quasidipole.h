@@ -37,14 +37,15 @@ enum quasiDipoleStatus
     QD_NO_COEFF_FILENAME
 };
 
-int initQuasiDipleCoefficients(char *filename, double year, bool calculateLongitudeOffset);
+int initQuasiDipleCoefficients(char *filename, double year);
 void freeQuasiDipoleCoefficients(void);
 
-int geographicToQuasiDipole(char *coeffFilename, double unixTime, double geodeticLatitude, double longitude, double altitudeKm, double *qdLatitude, double *qdLongitude, double *mlt);
+int geographicToQuasiDipole(char *coeffFilename, double unixTime, double geodeticLatitude, double longitude, double altitudeKm, double *qdLatitude, double *qdLongitude);
 
 double solarTimeDifferenceHours(double dateAsYear);
 
 int quasiDipoleToGeographic(char *coeffFilename, double unixTime, double qdLatitude, double qdLongitude, double altitudeKm, double *geodeticLatitude, double *longitude);
+double quasiDipoleMagneticLocalTime(char *coeffFilename, double unixTime, double qdLatitude, double qdLongitude, double *mlt);
 
 int quasiDipoleSphericalHarmonics(double theta, double phi);
 int alfBasisInit(int32_t nmax0in, int32_t mmax0in);

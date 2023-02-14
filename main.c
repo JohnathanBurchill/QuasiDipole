@@ -119,10 +119,11 @@ int main(int argc, char *argv[])
 
     for (long i = 0; i < count; i++)
     {
-        status = geographicToQuasiDipole(coeffFile, times[i], glat[i], glon[i], galt[i], qdlat + i, qdlon + i, qdmlt + i);
+        status = geographicToQuasiDipole(coeffFile, times[i], glat[i], glon[i], galt[i], qdlat + i, qdlon + i);
+        status = quasiDipoleMagneticLocalTime(coeffFile, times[i], qdlat[i], qdlon[i], qdmlt + i);
     }
 
-    fprintf(stdout, "%9s%9s%9s%9s%9s%9s%9s\n", "Time (S)", "LAT","LON","ALT","QDLAT","QDLON","MLT");
+    fprintf(stdout, "%9s%9s%9s%9s%9s%9s%9s\n", "Time (S)", "LAT","LON","ALT","QDLAT","QDLON","QDMLT");
     for (long i = 0; i < count; i++)
     {
         fprintf(stdout, "%9.0lf%9.1lf%9.1lf%9.1lf%9.2lf%9.2lf%9.2lf\n", times[i], glat[i], glon[i], galt[i], qdlat[i], qdlon[i], qdmlt[i]);

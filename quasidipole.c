@@ -65,14 +65,12 @@ static double *pbar = NULL;
 static double *vbar = NULL;
 static double *wbar = NULL;
 
-static double longitudeOffset = 0.0;
-
 #define Req 6378.1370
 #define eps 1.0/298.257223563
 #define Re (( Req * (1.0 - eps/3.0) ))
 #define ecc2 (( eps * (2.0 - eps) ))
 
-int initQuasiDipleCoefficients(char *filename, double dateAsYear, bool calculateLongitudeOffset)
+int initQuasiDipleCoefficients(char *filename, double dateAsYear)
 {
     if (filename == NULL)
         return QD_NO_COEFF_FILENAME;
@@ -101,8 +99,6 @@ int initQuasiDipleCoefficients(char *filename, double dateAsYear, bool calculate
             goto cleanup;
         }
         ntermsh =  mmax*(2*nmax - mmax + 1) + nmax + 1;
-
-        // fprintf(stderr, "%s: nepoch: %d, nmax: %d, mmax: %d, lmax: %d, nterm: %d, ntermsh: %d\n", basename(filename), nepoch, nmax, mmax, lmax, nterm, ntermsh);
 
         void *mem = realloc(epochgrid, sizeof *epochgrid * nepoch);
         if (mem == NULL)
@@ -366,29 +362,9 @@ int initQuasiDipleCoefficients(char *filename, double dateAsYear, bool calculate
             }
         }
 
-        struct tm date = {0};
-        int y = (int)floor(dateAsYear);
-        double days = (dateAsYear - (double)y) * 365.24;
-        date.tm_year = y - 1900;
-        date.tm_yday = (int)floor(days);
-        double secs = (days - (double)date.tm_yday) * 86400.0;
-        date.tm_sec = (int)floor(secs);
-        time_t t = timegm(&date);
-
-        double lat = 0;
-        double lon = 0;
-
         status = alfBasisInit(nmax, mmax);
         if (status != QD_OK)
             goto cleanup;
-
-        if (calculateLongitudeOffset)
-        {
-            status = quasiDipoleToGeographic(filename, (double)t, 0, 0, 0, &lat, &lon);
-            if (status != QD_OK)
-                return status;
-            longitudeOffset = lon;
-        }
 
     }
 
@@ -429,10 +405,10 @@ void freeQuasiDipoleCoefficients(void)
     return;
 }
 
-int geographicToQuasiDipole(char *coeffFilename, double unixTime, double geodeticLatitude, double longitude, double altitudeKm, double *qdLatitude, double *qdLongitude, double *mlt)
+int geographicToQuasiDipole(char *coeffFilename, double unixTime, double geodeticLatitude, double longitude, double altitudeKm, double *qdLatitude, double *qdLongitude)
 {
 
-    if (qdLatitude == NULL && qdLongitude == NULL && mlt == NULL)
+    if (qdLatitude == NULL && qdLongitude == NULL)
         return QD_VOID_ARG;
 
     static double lastAltG = -100000.0;
@@ -440,7 +416,7 @@ int geographicToQuasiDipole(char *coeffFilename, double unixTime, double geodeti
     time_t t = (time_t)floor(unixTime);
     struct tm *tdata = gmtime(&t);
     double year = tdata->tm_year + 1900 + ((double)tdata->tm_yday + (double)tdata->tm_hour / 24.0) / 365.24;
-    int status = initQuasiDipleCoefficients(coeffFilename, year, true);
+    int status = initQuasiDipleCoefficients(coeffFilename, year);
     if (status != QD_OK)
         return status;
 
@@ -488,20 +464,47 @@ int geographicToQuasiDipole(char *coeffFilename, double unixTime, double geodeti
     if (qdLongitude != NULL)
         *qdLongitude = qlon * 180.0 / M_PI;
 
-    if (mlt != NULL)
-    {
-        // Approximate
-        double diffHours = solarTimeDifferenceHours(year);
-        double utHours = tdata->tm_hour + tdata->tm_min / 60.0 + tdata->tm_sec / 3600.0;
-        double apparentSolarTime = utHours + diffHours;
-        *mlt = apparentSolarTime + (longitude + longitudeOffset) / 15.0;
+    return status;
+}
+
+double quasiDipoleMagneticLocalTime(char *coeffFilename, double unixTime, double qdLatitude, double qdLongitude, double *mlt)
+{
+    if (coeffFilename == NULL || mlt == NULL)
+        return QD_VOID_ARG;
+
+    int status = QD_OK; 
+
+    // See Landal and Richmond, Space Sci. Rev., 2017, 206:27-59.
+    // https://doi.org/10.1007%2Fs11214-016-0275-y
+
+    time_t t = (time_t)floor(unixTime);
+
+    struct tm *tdata = gmtime(&t);
+    double year = tdata->tm_year + 1900 + tdata->tm_yday / 365.24;
+
+    // Any estimate of MLT is approximate
+    // Using QD longitude of subsolar point at ~10 Re as an approximation for 
+    // centered-dipole longitude of subsolar point
+    double diffHours = solarTimeDifferenceHours(year);
+    double utHours = tdata->tm_hour + tdata->tm_min / 60.0 + tdata->tm_sec / 3600.0;
+    double apparentSolarTime = utHours + diffHours;
+    // Update latitude based on solar declination
+    double latitude = 0.0;
+    double longitude = (apparentSolarTime - 12.0) / 15.0;
+    double qdlatitudeSubsolarPoint = 0.0;
+    double qdlongitudeSubsolarPoint = 0.0;
+    status = geographicToQuasiDipole(coeffFilename, unixTime, 0.0, longitude, 64000.0, &qdlatitudeSubsolarPoint, &qdlongitudeSubsolarPoint);
+    if (status != QD_OK)
+        return status;
+
+    *mlt = (qdLongitude - qdlongitudeSubsolarPoint) / 15.0 + 12.0;
         if (*mlt < 0)
             *mlt = *mlt + 24.0;
         else if (*mlt > 24.0)
             *mlt = *mlt - 24.0;
-    }
 
     return status;
+
 }
 
 double solarTimeDifferenceHours(double dateAsYear)
@@ -529,7 +532,7 @@ int quasiDipoleToGeographic(char *coeffFilename, double unixTime, double qdLatit
     time_t t = (time_t)floor(unixTime);
     struct tm *tdata = gmtime(&t);
     double year = tdata->tm_year + 1900 + ((double)tdata->tm_yday + (double)tdata->tm_hour / 24.0) / 365.24;
-    int status = initQuasiDipleCoefficients(coeffFilename, year, false);
+    int status = initQuasiDipleCoefficients(coeffFilename, year);
     if (status != QD_OK)
         return status;
 
